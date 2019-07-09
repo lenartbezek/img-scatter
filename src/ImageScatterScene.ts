@@ -16,7 +16,7 @@ import OrbitControls from "three-orbitcontrols";
 export class ImageScatterScene {
     // Scene creation parameters that cannot be tuned during simulation.
     public readonly cameraFov = 60;
-    public readonly particleSize = 0.25;
+    public readonly particleSize = 0.5;
 
     // Private THREE.js objects.
     private scene: Scene;
@@ -24,6 +24,7 @@ export class ImageScatterScene {
     private camera: PerspectiveCamera;
     private geometry: BufferGeometry;
     private object: Points;
+    private controls: OrbitControls;
 
     /** Stops rendering. */
     private stopped: boolean = false;
@@ -47,8 +48,8 @@ export class ImageScatterScene {
         this.element.appendChild(this.renderer.domElement);
         addResizeListener(this.element, this.onResize);
 
-        this.camera = new PerspectiveCamera(this.cameraFov, rect.width / rect.height, 1, 1000);
-        this.camera.position.set(0, 0, 150);
+        this.camera = new PerspectiveCamera(this.cameraFov, rect.width / rect.height, 1, 10000);
+        this.camera.position.set(0, 0, 250);
         this.scene.add(this.camera);
 
         const vertices: Vector3[] = [];
@@ -63,8 +64,8 @@ export class ImageScatterScene {
             const y = Math.floor(index / width);
             const x = Math.floor(index % width);
             vertices.push(new Vector3(
-                (x - width / 2) / width * 100,
-                -(y - height / 2) / width * 100,
+                (x - width / 2) / width * 200,
+                -(y - height / 2) / width * 200,
                 -(h - 0.5) * 25,
             ));
             colors.push(new Vector3(
@@ -93,7 +94,9 @@ export class ImageScatterScene {
 
         this.scene.add(this.object);
 
-        new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enablePan = false;
+        this.controls.autoRotate = true;
 
         this.render();
     }
@@ -112,6 +115,8 @@ export class ImageScatterScene {
 
     private render() {
         if (this.stopped) { return; }
+
+        this.controls.update();
         
         // Render scene.
         this.renderer.render(this.scene, this.camera);
