@@ -2,20 +2,16 @@ import { addListener as addResizeListener, removeListener as removeResizeListene
 import {
     BufferAttribute,
     BufferGeometry,
-    Clock,
-    Mesh,
-    MeshBasicMaterial,
     PerspectiveCamera,
-    PlaneBufferGeometry,
     Points,
     PointsMaterial,
     Scene,
-    Vector2,
     Vector3,
     VertexColors,
     WebGLRenderer,
 } from "three";
 import { rgbToHsl, setBufferFromVector } from "./util";
+import OrbitControls from "three-orbitcontrols";
 
 export class ImageScatterScene {
     // Scene creation parameters that cannot be tuned during simulation.
@@ -28,9 +24,6 @@ export class ImageScatterScene {
     private camera: PerspectiveCamera;
     private geometry: BufferGeometry;
     private object: Points;
-    private plane: Mesh;
-    private clock: Clock;
-    private cursor: Vector2 | undefined;
 
     /** Stops rendering. */
     private stopped: boolean = false;
@@ -52,9 +45,6 @@ export class ImageScatterScene {
         const rect = this.element.getBoundingClientRect();
         this.renderer.setSize(rect.width, rect.height);
         this.element.appendChild(this.renderer.domElement);
-        this.element.addEventListener("mousemove", this.onCursorMove);
-        this.element.addEventListener("touchmove", this.onCursorMove, { passive: true });
-        this.element.addEventListener("touchend", this.onCursorCancel, { passive: true });
         addResizeListener(this.element, this.onResize);
 
         this.camera = new PerspectiveCamera(this.cameraFov, rect.width / rect.height, 1, 1000);
@@ -66,7 +56,7 @@ export class ImageScatterScene {
 
         const { data, width, height } = image;
 
-        for (let i = 0; i < data.length; i += 4) {
+        for (let i = 0; i < data.length * 4; i += 4) {
             const [r, g, b] = data.slice(i, i + 3);
             const [h] = rgbToHsl(r, g, b);
             const y = Math.floor(i / width);
@@ -74,7 +64,7 @@ export class ImageScatterScene {
             vertices.push(new Vector3(
                 (x - width / 2) / width * 100,
                 -(y - height / 2) / width * 100,
-                h * 100,
+                -(h - 0.5) * 100,
             ));
             colors.push(new Vector3(
                 r / 256,
@@ -102,21 +92,13 @@ export class ImageScatterScene {
 
         this.scene.add(this.object);
 
-        // Add raycasting plane.
-        this.plane = new Mesh(new PlaneBufferGeometry(500, 500, 0, 0), new MeshBasicMaterial({ visible: false }));
-        this.plane.position.z = 35;
-        this.scene.add(this.plane);
-
-        this.clock = new Clock();
+        new OrbitControls(this.camera, this.renderer.domElement);
 
         this.render();
     }
 
     public stop() {
         this.stopped = true;
-        this.element.removeEventListener("mousemove", this.onCursorMove);
-        this.element.removeEventListener("touchmove", this.onCursorMove);
-        this.element.removeEventListener("touchend", this.onCursorCancel);
         removeResizeListener(this.element, this.onResize);
     }
 
@@ -129,37 +111,10 @@ export class ImageScatterScene {
 
     private render() {
         if (this.stopped) { return; }
-        requestAnimationFrame(this.render.bind(this));
-        const delta = this.clock.getDelta();
-
-        // Rotate object.
-        this.object.rotation.y += delta * 0.2;
-
+        
         // Render scene.
         this.renderer.render(this.scene, this.camera);
-    }
 
-    private onCursorMove = (event: MouseEvent | TouchEvent) => {
-        let cursorX: number;
-        let cursorY: number;
-        if ("touches" in event) {
-            cursorX = event.touches[0].clientX;
-            cursorY = event.touches[0].clientY;
-        } else {
-            cursorX = event.clientX;
-            cursorY = event.clientY;
-        }
-        const rect = this.element.getBoundingClientRect();
-        const x = (cursorX / rect.width) * 2 - 1;
-        const y = -(cursorY / rect.height) * 2 + 1;
-        if (this.cursor) {
-            this.cursor.set(x, y);
-        } else {
-            this.cursor = new Vector2(x, y);
-        }
-    }
-
-    private onCursorCancel = () => {
-        this.cursor = undefined;
+        requestAnimationFrame(this.render.bind(this));
     }
 }

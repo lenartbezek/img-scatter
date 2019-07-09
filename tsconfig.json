@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
+    "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "moduleResolution": "node",
     "module": "esnext",
