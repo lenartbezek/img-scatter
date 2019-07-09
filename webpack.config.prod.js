@@ -19,7 +19,7 @@ module.exports = {
     path: path.join(__dirname, "dist"),
     filename: "[name].[chunkhash].js",
     chunkFilename: "[name].[chunkhash].js",
-    publicPath: "/",
+    publicPath: "/img-scatter/",
   },
   resolve: {
     extensions: [".ts", ".js"],
