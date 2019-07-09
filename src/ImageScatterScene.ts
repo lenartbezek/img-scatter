@@ -16,7 +16,7 @@ import OrbitControls from "three-orbitcontrols";
 export class ImageScatterScene {
     // Scene creation parameters that cannot be tuned during simulation.
     public readonly cameraFov = 60;
-    public readonly particleSize = 1;
+    public readonly particleSize = 0.25;
 
     // Private THREE.js objects.
     private scene: Scene;
@@ -48,7 +48,7 @@ export class ImageScatterScene {
         addResizeListener(this.element, this.onResize);
 
         this.camera = new PerspectiveCamera(this.cameraFov, rect.width / rect.height, 1, 1000);
-        this.camera.position.set(0, 0, 250);
+        this.camera.position.set(0, 0, 150);
         this.scene.add(this.camera);
 
         const vertices: Vector3[] = [];
@@ -56,15 +56,16 @@ export class ImageScatterScene {
 
         const { data, width, height } = image;
 
-        for (let i = 0; i < data.length * 4; i += 4) {
+        for (let i = 0; i < data.length; i += 4) {
             const [r, g, b] = data.slice(i, i + 3);
             const [h] = rgbToHsl(r, g, b);
-            const y = Math.floor(i / width);
-            const x = Math.floor(i % width);
+            const index = i / 4;
+            const y = Math.floor(index / width);
+            const x = Math.floor(index % width);
             vertices.push(new Vector3(
                 (x - width / 2) / width * 100,
                 -(y - height / 2) / width * 100,
-                -(h - 0.5) * 100,
+                -(h - 0.5) * 25,
             ));
             colors.push(new Vector3(
                 r / 256,
