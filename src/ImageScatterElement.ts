@@ -16,9 +16,17 @@ export class ImageScatterElement extends LitElement {
 
     public scene: ImageScatterScene | undefined;
 
-    public async firstUpdated() {
-        const data = await this.getImageData();
-        this.scene = new ImageScatterScene(this.div!, data);
+    public async attributeChangedCallback(name: string, _: string, value: string) {
+        switch (name) {
+            case "src":
+                const data = await this.getImageData(value);
+                if (this.scene) {
+                    this.scene.loadImage(data);
+                } else {
+                    this.scene = new ImageScatterScene(this.div!, data);
+                }
+                return;
+        }
     }
 
     protected render() {
@@ -40,9 +48,9 @@ export class ImageScatterElement extends LitElement {
         `;
     }
 
-    private getImageData() {
+    private getImageData(src?: string) {
         const image = new Image();
-        image.src = this.src;
+        image.src = src || this.src;
         return new Promise<ImageData>((resolve, reject) => {
             image.onload = () => {
                 const canvas = document.createElement("canvas");
@@ -57,10 +65,10 @@ export class ImageScatterElement extends LitElement {
 
                 return resolve(data);
             };
-            image.onerror = (err, ...args) => {
-                reject(err);
+            image.onerror = (event, source, lineno, colno, error) => {
+                reject(error);
                 if (this.onerror) {
-                    this.onerror(err, ...args);
+                    this.onerror(event, source, lineno, colno, error);
                 }
             };
         });

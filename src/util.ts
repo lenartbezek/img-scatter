@@ -30,9 +30,30 @@ export function rgbToHsl(r: number, g: number, b: number) {
     return [h, s, l];
   }
 
+export function getVectorFromBuffer(buffer: Float32Array, index: number) {
+  const offset = index * 3;
+  return new Vector3(
+      buffer[offset],
+      buffer[offset + 1],
+      buffer[offset + 2],
+  );
+}
+
 export function setBufferFromVector(buffer: Float32Array, index: number, vector: Vector3) {
     const offset = index * 3;
     buffer[offset] = vector.x;
     buffer[offset + 1] = vector.y;
     buffer[offset + 2] = vector.z;
+}
+
+export function applyToBuffer(
+  sourceBuffer: Float32Array,
+  targetBuffer: Float32Array,
+  fn: (v: Vector3, i: number) => Vector3,
+  range?: number) {
+  if (typeof range === "undefined") { range = sourceBuffer.length / 3; }
+  for (let i = 0; i < range; i += 1) {
+      const v = fn(getVectorFromBuffer(sourceBuffer, i), i);
+      setBufferFromVector(targetBuffer, i, v);
+  }
 }

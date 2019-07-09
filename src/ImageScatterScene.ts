@@ -2,6 +2,7 @@ import { addListener as addResizeListener, removeListener as removeResizeListene
 import {
     BufferAttribute,
     BufferGeometry,
+    Clock,
     PerspectiveCamera,
     Points,
     PointsMaterial,
@@ -10,8 +11,8 @@ import {
     VertexColors,
     WebGLRenderer,
 } from "three";
-import { rgbToHsl, setBufferFromVector } from "./util";
 import OrbitControls from "three-orbitcontrols";
+import { applyToBuffer, rgbToHsl, setBufferFromVector } from "./util";
 
 export class ImageScatterScene {
     // Scene creation parameters that cannot be tuned during simulation.
@@ -25,13 +26,19 @@ export class ImageScatterScene {
     private geometry: BufferGeometry;
     private object: Points;
     private controls: OrbitControls;
+    private clock: Clock;
+
+    private vertices: Vector3[] = [];
+    private rgb: Array<[number, number, number]> = [];
+    private hsl: Array<[number, number, number]> = [];
 
     /** Stops rendering. */
     private stopped: boolean = false;
+    private animate: boolean = false;
 
     constructor(
         public readonly element: HTMLElement,
-        public readonly image: ImageData,
+        public readonly image?: ImageData,
     ) {
         // Initialize scene.
         this.scene = new Scene();
@@ -52,39 +59,12 @@ export class ImageScatterScene {
         this.camera.position.set(0, 0, 250);
         this.scene.add(this.camera);
 
-        const vertices: Vector3[] = [];
-        const colors: Vector3[] = [];
-
-        const { data, width, height } = image;
-
-        for (let i = 0; i < data.length; i += 4) {
-            const [r, g, b] = data.slice(i, i + 3);
-            const [h] = rgbToHsl(r, g, b);
-            const index = i / 4;
-            const y = Math.floor(index / width);
-            const x = Math.floor(index % width);
-            vertices.push(new Vector3(
-                (x - width / 2) / width * 200,
-                -(y - height / 2) / width * 200,
-                -(h - 0.5) * 25,
-            ));
-            colors.push(new Vector3(
-                r / 256,
-                g / 256,
-                b / 256,
-            ));
-        }
-
-        // Generate buffers
-        const vertexBuffer = new Float32Array(vertices.length * 3);
-        vertices.forEach((v, i) => setBufferFromVector(vertexBuffer, i, v));
-        const colorBuffer = new Float32Array(colors.length * 3);
-        colors.forEach((v, i) => setBufferFromVector(colorBuffer, i, v));
-
         // Create geometry
         this.geometry = new BufferGeometry();
-        this.geometry.addAttribute("position", new BufferAttribute(vertexBuffer, 3));
-        this.geometry.addAttribute("color", new BufferAttribute(colorBuffer, 3));
+
+        if (image) {
+            this.loadImage(image);
+        }
 
         // Create an object
         this.object = new Points(this.geometry, new PointsMaterial({
@@ -98,11 +78,49 @@ export class ImageScatterScene {
         this.controls.enablePan = false;
         this.controls.autoRotate = true;
 
+        this.clock = new Clock();
+
         this.render();
     }
 
-    public stop() {
+    public loadImage(image: ImageData) {
+        const { data, width, height } = image;
+
+        // Make sure all arrays are empty
+        this.vertices = [];
+        this.rgb = [];
+        this.hsl = [];
+
+        // Fill vertex and color arrays
+        for (let i = 0; i < data.length; i += 4) {
+            const [r, g, b] = data.slice(i, i + 3);
+            const [h, s, l] = rgbToHsl(r, g, b);
+            const index = i / 4;
+            const y = Math.floor(index / width);
+            const x = Math.floor(index % width);
+            this.vertices.push(new Vector3(
+                (x - width / 2) / width * 200,
+                -(y - height / 2) / width * 200,
+                -(h - 0.5) * 50,
+            ));
+            this.rgb.push([r, g, b]);
+            this.hsl.push([h, s, l]);
+        }
+
+        // Generate buffers
+        const vertexBuffer = new Float32Array(this.vertices.length * 3);
+        this.vertices.forEach((v, i) => setBufferFromVector(vertexBuffer, i, v));
+        const colorBuffer = new Float32Array(this.rgb.length * 3);
+        this.rgb.forEach(([r, g, b], i) => setBufferFromVector(colorBuffer, i, new Vector3(r / 256, g / 256, b / 256)));
+
+        this.geometry.addAttribute("position", new BufferAttribute(vertexBuffer, 3));
+        this.geometry.addAttribute("color", new BufferAttribute(colorBuffer, 3));
+    }
+
+    public dispose() {
         this.stopped = true;
+        this.scene.dispose();
+        this.renderer.dispose();
         removeResizeListener(this.element, this.onResize);
     }
 
@@ -116,9 +134,26 @@ export class ImageScatterScene {
     private render() {
         if (this.stopped) { return; }
 
+        if (this.animate) {
+            const t = this.clock.getElapsedTime();
+            const positionAttribute = this.geometry.getAttribute("position");
+            const positionBuffer = positionAttribute.array as Float32Array;
+            applyToBuffer(positionBuffer, positionBuffer, (v, i) => {
+                const [h] = this.hsl[i];
+                const oldZ = v.z;
+                const newZ = Math.sin(t) * -(h - 0.5) * 50;
+                return new Vector3(
+                    v.x,
+                    v.y,
+                    (oldZ + newZ) / 2,
+                );
+            });
+
+            // @ts-ignore
+            positionAttribute.needsUpdate = true;
+        }
+
         this.controls.update();
-        
-        // Render scene.
         this.renderer.render(this.scene, this.camera);
 
         requestAnimationFrame(this.render.bind(this));

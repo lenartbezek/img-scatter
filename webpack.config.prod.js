@@ -14,6 +14,9 @@ module.exports = {
     "img-scatter": [
       "./src/index.ts",
     ],
+    "demo": [
+      './src/demo.ts',
+    ]
   },
   output: {
     path: path.join(__dirname, "dist"),
@@ -38,7 +41,7 @@ module.exports = {
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       filename: "index.html",
-      template: "src/index.ejs",
+      template: "src/demo.ejs",
       hash: false,
     }),
   ],
