@@ -80,7 +80,6 @@ export function sortPixel(
       return (l - 0.5) * 2;
     case PixelSortMethod.Hue:
     default:
-      return h / Math.PI - 1;
-
+      return (h - 0.5) * -2;
   }
 }

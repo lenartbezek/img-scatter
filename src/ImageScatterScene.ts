@@ -12,7 +12,7 @@ import {
     WebGLRenderer,
 } from "three";
 import OrbitControls from "three-orbitcontrols";
-import { applyToBuffer, PixelSortMethod, rgbToHsl, setBufferFromVector, sortPixel } from "./util";
+import { applyToBuffer, getVectorFromBuffer, PixelSortMethod, rgbToHsl, setBufferFromVector, sortPixel } from "./util";
 
 export class ImageScatterScene {
     // Scene creation parameters that cannot be tuned during simulation.
@@ -35,8 +35,9 @@ export class ImageScatterScene {
     /** Stops rendering. */
     private stopped: boolean = false;
     private animate: boolean = false;
-    private changed: boolean = true;
     private sortMethod?: PixelSortMethod;
+    private scatterFactor: number = 50;
+    private animation?: IterableIterator<number>;
 
     constructor(
         public readonly element: HTMLElement,
@@ -87,7 +88,6 @@ export class ImageScatterScene {
 
     public setAnimateChanges(animate: boolean) {
         this.animate = animate;
-        this.changed = true;
     }
 
     public setAutoRotate(autoRotate: boolean) {
@@ -96,7 +96,12 @@ export class ImageScatterScene {
 
     public setSortMethod(method: PixelSortMethod) {
         this.sortMethod = method;
-        this.changed = true;
+        this.animation = this.startAnimation(this.animate ? 2 : 0);
+    }
+
+    public setScatterFactor(value: number) {
+        this.scatterFactor = value;
+        this.animation = this.startAnimation(this.animate ? 2 : 0);
     }
 
     public loadImage(image: ImageData) {
@@ -117,7 +122,7 @@ export class ImageScatterScene {
             this.vertices.push(new Vector3(
                 (x - width / 2) / width * 200,
                 -(y - height / 2) / width * 200,
-                -(h - 0.5) * 50,
+                0,
             ));
             this.rgb.push([r, g, b]);
             this.hsl.push([h, s, l]);
@@ -131,8 +136,6 @@ export class ImageScatterScene {
 
         this.geometry.addAttribute("position", new BufferAttribute(vertexBuffer, 3));
         this.geometry.addAttribute("color", new BufferAttribute(colorBuffer, 3));
-
-        this.changed = true;
     }
 
     public dispose() {
@@ -149,21 +152,34 @@ export class ImageScatterScene {
         this.renderer.setSize(rect.width, rect.height);
     }
 
-    private render() {
-        if (this.stopped) { return; }
+    private easeInOut(t: number) {
+        return (Math.cos(Math.PI * (1 - t)) + 1) / 2;
+    }
 
-        if (this.animate) {
-            const t = this.clock.getDelta();
-            const positionAttribute = this.geometry.getAttribute("position");
-            const positionBuffer = positionAttribute.array as Float32Array;
-            applyToBuffer(positionBuffer, positionBuffer, (v, i) => {
-                const [h, s, l] = this.hsl[i];
-                const prev = v;
-                const next = new Vector3(
-                    v.x,
-                    v.y,
-                    sortPixel(h, s, l, this.sortMethod) * 50,
-                );
+    private * startAnimation(duration: number = 0): IterableIterator<number> {
+        const positionAttribute = this.geometry.getAttribute("position");
+        const positionBuffer = positionAttribute.array as Float32Array;
+
+        const startTime = this.clock.getElapsedTime();
+
+        const prevBuffer = Float32Array.from(positionBuffer);
+        const nextBuffer = new Float32Array(positionBuffer.length);
+        applyToBuffer(prevBuffer, nextBuffer, (v, i) => {
+            const [h, s, l] = this.hsl[i];
+            return new Vector3(
+                v.x,
+                v.y,
+                sortPixel(h, s, l, this.sortMethod) * this.scatterFactor,
+            );
+        });
+
+        do {
+            const delta = Math.min(1, (this.clock.getElapsedTime() - startTime) / duration);
+            const t = this.easeInOut(delta);
+
+            applyToBuffer(positionBuffer, positionBuffer, (_, i) => {
+                const prev = getVectorFromBuffer(prevBuffer, i);
+                const next = getVectorFromBuffer(nextBuffer, i);
                 return new Vector3(
                     prev.x + (next.x - prev.x) * t,
                     prev.y + (next.y - prev.y) * t,
@@ -173,21 +189,20 @@ export class ImageScatterScene {
 
             // @ts-ignore
             positionAttribute.needsUpdate = true;
-        } else if (this.changed) {
-            this.changed = false;
-            const positionAttribute = this.geometry.getAttribute("position");
-            const positionBuffer = positionAttribute.array as Float32Array;
-            applyToBuffer(positionBuffer, positionBuffer, (v, i) => {
-                const [h, s, l] = this.hsl[i];
-                return new Vector3(
-                    v.x,
-                    v.y,
-                    sortPixel(h, s, l, this.sortMethod) * 50,
-                );
-            });
 
-            // @ts-ignore
-            positionAttribute.needsUpdate = true;
+            yield t;
+        } while (startTime + duration > this.clock.getElapsedTime());
+    }
+
+    private render() {
+        if (this.stopped) { return; }
+
+        if (this.animation) {
+            const { done } = this.animation.next();
+
+            if (done) {
+                this.animation = undefined;
+            }
         }
 
         this.controls.update();

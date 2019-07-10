@@ -24,39 +24,34 @@ export class ImageScatterElement extends LitElement {
     @property({ type: String })
     public sortmethod: PixelSortMethod = PixelSortMethod.Hue;
 
+    @property({ type: Number })
+    public scatterfactor: number = 50;
+
     public scene: ImageScatterScene | undefined;
 
     public async attributeChangedCallback(name: string, _: string, value: string) {
+        if (name === "src") {
+            const data = await this.getImageData(value);
+            if (this.scene) {
+                this.scene.loadImage(data);
+            } else {
+                this.scene = new ImageScatterScene(this.div!, data);
+                this.scene.setAnimateChanges(this.animatechanges);
+                this.scene.setAutoRotate(this.autorotate);
+                this.scene.setSortMethod(this.sortmethod);
+            }
+            return;
+        }
+        if (!this.scene) { return; }
         switch (name) {
-            case "src":
-                const data = await this.getImageData(value);
-                if (this.scene) {
-                    this.scene.loadImage(data);
-                } else {
-                    this.scene = new ImageScatterScene(this.div!, data);
-                    this.scene.setAnimateChanges(this.animatechanges);
-                    this.scene.setAutoRotate(this.autorotate);
-                    this.scene.setSortMethod(this.sortmethod);
-                }
-                return;
             case "animatechanges":
-                if (this.scene) {
-                    return this.scene.setAnimateChanges(JSON.parse(value));
-                } else {
-                    return;
-                }
+                return this.scene.setAnimateChanges(JSON.parse(value));
             case "autorotate":
-                if (this.scene) {
-                    return this.scene.setAutoRotate(JSON.parse(value));
-                } else {
-                    return;
-                }
+                return this.scene.setAutoRotate(JSON.parse(value));
             case "sortmethod":
-                if (this.scene) {
-                    return this.scene.setSortMethod(value as PixelSortMethod);
-                } else {
-                    return;
-                }
+                return this.scene.setSortMethod(value as PixelSortMethod);
+            case "scatterfactor":
+                return this.scene.setScatterFactor(parseFloat(value));
         }
     }
 
