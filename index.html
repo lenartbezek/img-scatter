@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset=utf-8>
+	<title>Pixel scatter</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		* {
+			color: white;
+			font-family: 'Poppins', sans-serif;
+		}
+
+		body {
+			font-size: 12px;
+			margin: 0;
+			background-color: black;
+		}
+
+		img-scatter {
+			position: absolute;
+			top: 0; bottom: 0; right: 0; left: 0;
+			width: 100vw;
+			height: 100vh;
+			z-index: -1;
+		}
+
+		.controls {
+			margin: 8px;
+			padding: 8px;
+			border-radius: 4px;
+			border: 1px solid white;
+			background-color: #00000080;
+		}
+
+		select, button {
+			width: 100%;
+			border: 1px solid white;
+			border-radius: 4px;
+			background: none;
+			padding: 2px;
+		}
+
+		input[type="checkbox"] {
+			position: relative;
+			margin: 0;
+			-webkit-appearance: none;
+			border: 1px solid white;
+			border-radius: 4px;
+			background: none;
+			padding: 2px;
+			height: 2em;
+			width: 100%;
+		}
+
+		input[type="checkbox"]:after {
+			display: block;
+			text-align: center;
+			width: 100%;
+			content: "Disabled";
+			opacity: 0.75;
+		}
+
+		input[type="checkbox"]:checked:after {
+			content: "Enabled";
+			opacity: 1;
+		}
+
+		select > option {
+			background-color: black;
+		}
+
+		select:hover, button:hover {
+			background-color: #FFFFFF20
+		}
+
+		td:not(:last-child) {
+			padding-right: 8px;
+		}
+
+		a { 
+			margin: 16px;
+		}
+
+	</style>
+	<link href="https://fonts.googleapis.com/css?family=Poppins:300&display=swap" rel="stylesheet">
+</head>
+
+<body>
+	<table class="controls">
+		<tr class="control-group">
+			<td><label for="browse">Select image</label></td>
+			<td><button id="browse" type="button">Browse</button></td>
+			<input id="file" type="file" name="image" accept="image/*" style="display: none" />
+		</tr>
+		<tr class="control-group">
+			<td><label for="sortmethod">Scatter by</label></td>
+			<td>
+				<select id="sortmethod">
+					<option value="h" selected>Hue</option>
+					<option value="s">Saturation</option>
+					<option value="l">Luminosity</option>
+				</select>
+			</td>
+		</tr>
+		<tr class="control-group">
+			<td><label for="autorotate">Auto rotate</label></td>
+			<td><input id="autorotate" type="checkbox" checked/></td>
+		</tr>
+		<tr class="control-group">
+			<td><label for="animatechange">Animate change</label></td>
+			<td><input id="animatechange" type="checkbox" checked/></td>
+		</tr>
+	</table>
+	<a href="https://github.com/lenartbezek/img-scatter">View on GitHub</a>
+	<img-scatter src="/img-scatter/img/disenchantment.ad462b0b0af92c83ab557df0aa449ab1.jpg"></img-scatter>
+<script type="text/javascript" src="/img-scatter/img-scatter.7b46893fdc2d9b9c15bb.js"></script><script type="text/javascript" src="/img-scatter/demo.3855b867e339b946055c.js"></script></body>
+
+</html>
