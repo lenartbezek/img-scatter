@@ -19,7 +19,6 @@ function loadFile(file: File) {
 }
 
 document.addEventListener("drop", (e) => {
-    console.log(e);
     e.preventDefault();
     const [file] = e.dataTransfer && e.dataTransfer.files || [undefined];
     if (file && file.type.startsWith("image/")) {

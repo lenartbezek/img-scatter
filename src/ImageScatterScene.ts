@@ -136,6 +136,8 @@ export class ImageScatterScene {
 
         this.geometry.addAttribute("position", new BufferAttribute(vertexBuffer, 3));
         this.geometry.addAttribute("color", new BufferAttribute(colorBuffer, 3));
+
+        this.animation = this.startAnimation(this.animate ? 2 : 0);
     }
 
     public dispose() {
