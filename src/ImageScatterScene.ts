@@ -12,7 +12,7 @@ import {
     WebGLRenderer,
 } from "three";
 import OrbitControls from "three-orbitcontrols";
-import { applyToBuffer, rgbToHsl, setBufferFromVector } from "./util";
+import { applyToBuffer, PixelSortMethod, rgbToHsl, setBufferFromVector, sortPixel } from "./util";
 
 export class ImageScatterScene {
     // Scene creation parameters that cannot be tuned during simulation.
@@ -35,6 +35,8 @@ export class ImageScatterScene {
     /** Stops rendering. */
     private stopped: boolean = false;
     private animate: boolean = false;
+    private changed: boolean = true;
+    private sortMethod?: PixelSortMethod;
 
     constructor(
         public readonly element: HTMLElement,
@@ -83,6 +85,20 @@ export class ImageScatterScene {
         this.render();
     }
 
+    public setAnimateChanges(animate: boolean) {
+        this.animate = animate;
+        this.changed = true;
+    }
+
+    public setAutoRotate(autoRotate: boolean) {
+        this.controls.autoRotate = autoRotate;
+    }
+
+    public setSortMethod(method: PixelSortMethod) {
+        this.sortMethod = method;
+        this.changed = true;
+    }
+
     public loadImage(image: ImageData) {
         const { data, width, height } = image;
 
@@ -115,6 +131,8 @@ export class ImageScatterScene {
 
         this.geometry.addAttribute("position", new BufferAttribute(vertexBuffer, 3));
         this.geometry.addAttribute("color", new BufferAttribute(colorBuffer, 3));
+
+        this.changed = true;
     }
 
     public dispose() {
@@ -135,17 +153,36 @@ export class ImageScatterScene {
         if (this.stopped) { return; }
 
         if (this.animate) {
-            const t = this.clock.getElapsedTime();
+            const t = this.clock.getDelta();
             const positionAttribute = this.geometry.getAttribute("position");
             const positionBuffer = positionAttribute.array as Float32Array;
             applyToBuffer(positionBuffer, positionBuffer, (v, i) => {
-                const [h] = this.hsl[i];
-                const oldZ = v.z;
-                const newZ = Math.sin(t) * -(h - 0.5) * 50;
+                const [h, s, l] = this.hsl[i];
+                const prev = v;
+                const next = new Vector3(
+                    v.x,
+                    v.y,
+                    sortPixel(h, s, l, this.sortMethod) * 50,
+                );
+                return new Vector3(
+                    prev.x + (next.x - prev.x) * t,
+                    prev.y + (next.y - prev.y) * t,
+                    prev.z + (next.z - prev.z) * t,
+                );
+            });
+
+            // @ts-ignore
+            positionAttribute.needsUpdate = true;
+        } else if (this.changed) {
+            this.changed = false;
+            const positionAttribute = this.geometry.getAttribute("position");
+            const positionBuffer = positionAttribute.array as Float32Array;
+            applyToBuffer(positionBuffer, positionBuffer, (v, i) => {
+                const [h, s, l] = this.hsl[i];
                 return new Vector3(
                     v.x,
                     v.y,
-                    (oldZ + newZ) / 2,
+                    sortPixel(h, s, l, this.sortMethod) * 50,
                 );
             });
 

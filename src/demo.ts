@@ -1,10 +1,14 @@
 import { ImageScatterElement } from "./ImageScatterElement";
 
-const input = document.querySelector("input")! as HTMLInputElement;
+const fileInput = document.querySelector(`input[name="image"]`)! as HTMLInputElement;
+const methodSelect = document.querySelector(`select`)! as HTMLSelectElement;
+const rotateCheckbox = document.querySelector(`input[name="rotate"]`)! as HTMLInputElement;
+const animateCheckbox = document.querySelector(`input[name="animate"]`)! as HTMLInputElement;
+
 const img = document.querySelector("img-scatter")! as ImageScatterElement;
 
-input.addEventListener("input", () => {
-    const [file] = input.files || [undefined];
+fileInput.addEventListener("input", () => {
+    const [file] = fileInput.files || [undefined];
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -14,4 +18,16 @@ input.addEventListener("input", () => {
         };
         reader.readAsDataURL(file);
     }
+});
+
+methodSelect.addEventListener("select", () => {
+    img.setAttribute("sortmethod", methodSelect.value);
+});
+
+rotateCheckbox.addEventListener("change", () => {
+    img.setAttribute("autorotate", String(rotateCheckbox.checked));
+});
+
+animateCheckbox.addEventListener("change", () => {
+    img.setAttribute("animatechanges", String(animateCheckbox.checked));
 });

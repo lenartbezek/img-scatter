@@ -22,7 +22,16 @@
 </head>
 
 <body>
-	<input type="file" name="myImage" accept="image/*" />
+	<div class="controls">
+		<input type="file" name="image" accept="image/*" />
+		<select>
+			<option value="h">Hue</option>
+			<option value="s">Saturation</option>
+			<option value="l">Luminosity</option>
+		</select>
+		<input type="checkbox" name="rotate" />
+		<input type="checkbox" name="animate" />
+	</div>
 	<img-scatter src="<%- require('../assets/disenchantment.jpg') %>"></img-scatter>
 </body>
 
